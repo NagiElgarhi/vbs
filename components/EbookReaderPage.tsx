@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 // Ensure bookData is imported correctly based on your project structure
 // If you use constants/bookData.ts which imports from constants/parts/* :
@@ -217,6 +218,16 @@ export const EbookReaderPage: React.FC = () => {
     });
     setSearchQuery('');
     setSearchResults([]);
+  };
+
+  const handleGoHome = () => {
+    setActivePartId(null);
+    setActiveChapterId(null);
+    setActiveSectionId(null);
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+    setIsSidebarOpen(false);
   };
 
   // --- Search Logic ---
@@ -439,6 +450,7 @@ export const EbookReaderPage: React.FC = () => {
         onSearchResultClick={handleSearchResultClick}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        onGoHome={handleGoHome}
       />
 
       {/* Sidebar Toggle Button */}
@@ -539,7 +551,7 @@ export const EbookReaderPage: React.FC = () => {
                             className="mt-4 px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-lg shadow-lg hover:shadow-amber-500/30 transform hover:scale-105 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-stone-800"
                             style={{ fontSize: `calc(1.125rem * var(--font-size-multiplier, 1))` }}
                           >
-                           ابدأ رحلتك الآن
+                           ابدأ رحلتك
                           </button>
                     </div>
                     <div className="text-center mt-[100px]">

@@ -11,6 +11,7 @@ interface SidebarProps {
   onSearchResultClick: (result: SearchResult) => void;
   isOpen: boolean;
   onClose: () => void;
+  onGoHome: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -22,7 +23,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   searchResults,
   onSearchResultClick,
   isOpen,
-  onClose
+  onClose,
+  onGoHome
 }) => {
   type View = 'parts' | 'chapters' | 'sections';
   const [view, setView] = useState<View>('parts');
@@ -41,13 +43,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return ids;
   }, [book]);
 
-  const progressPercentage = useMemo(() => {
-    if (!activeSectionId || allSectionIds.length === 0) return 0;
+  const { progressPercentage, remainingSections } = useMemo(() => {
+    if (!allSectionIds || allSectionIds.length === 0) return { progressPercentage: 0, remainingSections: 0 };
     
-    const currentIndex = allSectionIds.indexOf(activeSectionId);
-    if (currentIndex === -1) return 0;
+    const currentIndex = activeSectionId ? allSectionIds.indexOf(activeSectionId) : -1;
+    const completedSections = currentIndex >= 0 ? currentIndex + 1 : 0;
     
-    return Math.round(((currentIndex + 1) / allSectionIds.length) * 100);
+    const percentage = Math.round((completedSections / allSectionIds.length) * 100);
+    const remaining = allSectionIds.length - completedSections;
+
+    return { progressPercentage: percentage, remainingSections: remaining };
   }, [activeSectionId, allSectionIds]);
 
 
@@ -123,7 +128,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </button>
-         ) : <div className="w-8 h-8"></div> /* Placeholder for alignment */ }
+         ) : (
+            <button onClick={onGoHome} title="العودة للرئيسية" className="p-1 text-stone-300 hover:text-white hover:bg-stone-500 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+              </svg>
+            </button>
+         ) }
 
         <h2 className="text-lg font-semibold text-stone-50 text-center truncate px-2" title={title}> 
           {title}
@@ -243,19 +254,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
        {/* Progress Bar */}
        <div className="px-4 py-3 border-b border-stone-600">
         <div className="flex justify-between mb-1 text-sm font-medium text-stone-200">
-          <span>تقدم القراءة</span>
+          <span>تقدم قراءة الكتاب</span>
           <span className="font-code">{progressPercentage}%</span>
         </div>
-        <div className="w-full bg-stone-900 rounded-full h-2">
-          <div 
-            className="bg-amber-400 h-2 rounded-full transition-all duration-500 ease-in-out" 
-            style={{ width: `${progressPercentage}%` }}
-            role="progressbar"
-            aria-valuenow={progressPercentage}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Reading progress"
-          ></div>
+        <div className="flex items-center space-x-2 rtl:space-x-reverse">
+          <div className="flex-grow w-full bg-stone-900 rounded-full h-2.5">
+            <div 
+              className="bg-amber-400 h-2.5 rounded-full transition-all duration-500 ease-in-out" 
+              style={{ width: `${progressPercentage}%` }}
+              role="progressbar"
+              aria-valuenow={progressPercentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Reading progress"
+            ></div>
+          </div>
+          <div className="text-xs font-medium text-stone-300 whitespace-nowrap">
+            {remainingSections > 0 ? `${remainingSections} مستوى متبقي` : 'اكتمل'}
+          </div>
         </div>
       </div>
 
