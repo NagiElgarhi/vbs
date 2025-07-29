@@ -262,21 +262,21 @@ export const EbookReaderPage: React.FC = () => {
             case ContentType.PARAGRAPH:
                 return `<p class="my-4 text-stone-300 leading-relaxed text-justify text-base">${item.text}</p>`;
             case ContentType.LIST_UNORDERED:
-                const itemsHtml = item.items?.map(li => `<li>${li}</li>`).join('') || '';
+                const itemsHtml = item.items ? item.items.map(li => `<li>${li}</li>`).join('') : '';
                 return `<ul class="my-4 mr-6 list-disc list-outside space-y-2 text-stone-300 text-base">${itemsHtml}</ul>`;
             case ContentType.CODE_EXPLANATION:
-                 const explanationsHtml = item.explanations?.map(ex => `
+                 const explanationsHtml = item.explanations ? item.explanations.map(ex => `
                     <div class="flex">
                         <div class="flex-shrink-0 w-16 text-center">
                             <span class="inline-block bg-stone-700 text-amber-300 font-bold text-xs px-2 py-1 rounded">سطر ${ex.lines}</span>
                         </div>
                         <p class="flex-grow mr-4 text-stone-300 text-sm leading-relaxed">${ex.explanation}</p>
-                    </div>`).join('') || '';
-                const codeLinesHtml = item.code?.split('\n').map((line, index) => `
+                    </div>`).join('') : '';
+                const codeLinesHtml = item.code ? item.code.split('\n').map((line, index) => `
                     <div class="flex">
                         <span class="w-8 text-right pr-4 text-gray-500 select-none">${index + 1}</span>
                         <code class="flex-1 whitespace-pre-wrap break-all">${line.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
-                    </div>`).join('') || '';
+                    </div>`).join('') : '';
                 return `
                     <div class="flex flex-col md:flex-row my-6 bg-stone-800 rounded-lg shadow-lg border border-stone-700 overflow-hidden">
                         <div class="w-full md:w-1/2 p-4 bg-stone-800 md:border-r-2 border-stone-700">
@@ -298,11 +298,11 @@ export const EbookReaderPage: React.FC = () => {
             case ContentType.CODE_BLOCK:
                 return `<div class="relative my-6 bg-gray-900 rounded-lg shadow-md font-code"><pre class="p-4 pt-4 text-gray-100 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-left text-base"><code dir="ltr">${item.code}</code></pre></div>`;
             case ContentType.DEFINITION_LIST:
-                const dlItemsHtml = item.definitionItems?.map(dl => `
+                const dlItemsHtml = item.definitionItems ? item.definitionItems.map(dl => `
                     <div class="bg-stone-700 p-3 rounded-md border border-stone-600">
                         <dt class="text-lg font-bold text-stone-200">${dl.term}</dt>
                         <dd class="text-lg text-stone-200 mr-4">${dl.definition}</dd>
-                    </div>`).join('') || '';
+                    </div>`).join('') : '';
                 return `<dl class="my-4 space-y-3">${dlItemsHtml}</dl>`;
             case ContentType.NOTE:
                 return `
@@ -403,8 +403,8 @@ export const EbookReaderPage: React.FC = () => {
 
   const currentPart = bookData.parts.find(p => p.id === activePartId);
   const currentPartIndex = bookData.parts.findIndex(p => p.id === activePartId);
-  const currentChapter = currentPart?.chapters.find((c: Chapter) => c.id === activeChapterId);
-  const activeSection = currentChapter?.sections.find(
+  const currentChapter = currentPart && currentPart.chapters.find((c: Chapter) => c.id === activeChapterId);
+  const activeSection = currentChapter && currentChapter.sections.find(
     (section) => section.id === activeSectionId
   );
   
@@ -527,17 +527,20 @@ export const EbookReaderPage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center h-full -mt-16">
                     <div className="decorative-frame max-w-2xl w-full text-center">
                         <h1
-                            className="font-amiri text-amber-200 p-8"
+                            className="font-amiri text-amber-200 p-8 welcome-text-shadow"
                             lang="ar"
                             dir="rtl"
                             style={{ fontSize: `calc(3rem * var(--font-size-multiplier, 1))` }}
                         >
                             وَقُل رَّبِّ زِدْنِي عِلْمًا
                         </h1>
-                        <p
-                          className="text-stone-400 mt-2"
-                          style={{ fontSize: `calc(1rem * var(--font-size-multiplier, 1))` }}
-                        >اختر بابًا من الفهرس لبدء القراءة</p>
+                         <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="mt-4 px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-lg shadow-lg hover:shadow-amber-500/30 transform hover:scale-105 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-stone-800"
+                            style={{ fontSize: `calc(1.125rem * var(--font-size-multiplier, 1))` }}
+                          >
+                           ابدأ رحلتك الآن
+                          </button>
                     </div>
                     <div className="text-center mt-[100px]">
                         <p
@@ -568,7 +571,7 @@ export const EbookReaderPage: React.FC = () => {
                 {/* Display content for the selected level (section) */}
                 {activeSection ? (
                 <article>
-                    <h2 style={{ fontSize: 'calc(1.5rem * var(--font-size-multiplier, 1))' }} className="text-2xl font-semibold text-stone-100 mb-6">{currentChapter?.chapterTitle}</h2>
+                    <h2 style={{ fontSize: 'calc(1.5rem * var(--font-size-multiplier, 1))' }} className="text-2xl font-semibold text-stone-100 mb-6">{currentChapter && currentChapter.chapterTitle}</h2>
                     
                     <section key={activeSection.id} id={activeSection.id} className="mb-12" aria-labelledby={`${activeSection.id}-title`}>
                         <div className="flex items-center mb-4">
@@ -581,7 +584,7 @@ export const EbookReaderPage: React.FC = () => {
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                             {speakingSectionId === activeSection.id ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-7.5-3l-4.5 4.5M7.5 12l4.5 4.5m-4.5-4.5L3 16.5m0 0L7.5 21m6-9.75L10.5 15m0 0L15 19.5m-4.5-4.5L7.5 15m0 0l4.5-4.5M3 7.5l4.5 4.5M7.5 12l4.5-4.5m-4.5 4.5L3 7.5m0 0L7.5 3" /> 
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-7.5-3l-4.5 4.5M7.5 12l4.5 4.5m-4.5-4.5L3 16.5m0 0L7.5 21m6-9.75L10.5 15m0 0L15 19.5m-4.5-4.5L7.5 15m0 0l4.5-4.5M3 7.5l4.5 4.5M7.5 12l4.5-4.5m-4.5-4.5L3 7.5m0 0L7.5 3" /> 
                             ) : (
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /> 
                             )}
@@ -678,7 +681,7 @@ export const EbookReaderPage: React.FC = () => {
 
             </div>
         </div>
-        {currentPart && <ChatWidget apiKey={geminiApiKey} sectionContent={activeSectionContent} sectionTitle={activeSection?.title || 'Current Section'} />}
+        {currentPart && <ChatWidget apiKey={geminiApiKey} sectionContent={activeSectionContent} sectionTitle={(activeSection && activeSection.title) || 'Current Section'} />}
     </>
   );
 };

@@ -1,8 +1,11 @@
-
 import React from 'react';
-import { ContentItem, ContentType, DefinitionListItem } from '../types';
+import { ContentItem, ContentType } from '../types';
 import CodeBlock from './CodeBlock';
 import CodeExplanationBlock from './CodeExplanationBlock';
+import AuthFlowProject from './projects/AuthFlowProject';
+import ContactFormProject from './projects/ContactFormProject';
+import DigitalProductProject from './projects/DigitalProductProject';
+import PaymentGatewayProject from './projects/PaymentGatewayProject';
 
 interface ContentRendererProps {
   item: ContentItem;
@@ -38,86 +41,90 @@ const getHashFromString = (str: string): number => {
   return Math.abs(hash);
 };
 
-
 const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
   const baseFontSizeStyle = (baseRem: string): React.CSSProperties => ({
     fontSize: `calc(${baseRem} * var(--font-size-multiplier, 1))`,
   });
 
   switch (item.type) {
-    case ContentType.HEADING3: // Used for section titles within EbookReaderPage's direct mapping
-      return <h3 style={baseFontSizeStyle('1.25rem')} className="text-xl font-semibold text-stone-100 mt-6 mb-3">{item.text}</h3>;
+    case ContentType.HEADING1:
+      return <h1 style={baseFontSizeStyle('2.25rem')} className="text-4xl font-bold text-amber-300 mt-8 mb-4">{item.text}</h1>;
+    case ContentType.HEADING2:
+      return <h2 style={baseFontSizeStyle('1.875rem')} className="text-3xl font-bold text-amber-400 mt-8 mb-4 border-b-2 border-stone-700 pb-2">{item.text}</h2>;
+    case ContentType.HEADING3:
+      return <h3 style={baseFontSizeStyle('1.5rem')} className="text-2xl font-semibold text-stone-100 mt-6 mb-3">{item.text}</h3>;
     case ContentType.HEADING4:
       return <h4 style={baseFontSizeStyle('1.25rem')} className="text-xl font-bold text-stone-100 mt-4 mb-2">{item.text}</h4>;
     case ContentType.PARAGRAPH:
-      return <p style={baseFontSizeStyle('1.25rem')} className="my-4 text-stone-300 leading-relaxed text-justify text-xl">{item.text}</p>;
+      return <p style={baseFontSizeStyle('1.125rem')} className="my-4 text-stone-300 leading-relaxed text-justify" dangerouslySetInnerHTML={{ __html: item.text || '' }} />;
     case ContentType.LIST_UNORDERED:
       return (
-        <ul style={baseFontSizeStyle('1.25rem')} className="my-4 mr-6 list-disc list-outside space-y-2 text-stone-300 text-xl">
-          {item.items?.map((li, index) => (
-            <li key={index} dangerouslySetInnerHTML={{ __html: li }}></li>
-          ))}
+        <ul style={baseFontSizeStyle('1.125rem')} className="my-4 mr-6 list-disc list-outside space-y-2 text-stone-300">
+          {item.items?.map((li, index) => <li key={index} dangerouslySetInnerHTML={{ __html: li }} />)}
         </ul>
       );
-    case ContentType.CODE_EXPLANATION:
-        return <CodeExplanationBlock 
-                    language={item.language} 
-                    code={item.code || ''} 
-                    explanations={item.explanations || []} 
-                    codeTitle={item.codeTitle}
-                />;
-    case ContentType.CODE_BLOCK: // Fallback for any old code blocks
+    case ContentType.CODE_BLOCK:
       return <CodeBlock language={item.language} code={item.code || ''} />;
+    case ContentType.CODE_EXPLANATION:
+      if (!item.explanations || !item.code) return null;
+      return (
+        <CodeExplanationBlock
+          language={item.language}
+          code={item.code}
+          explanations={item.explanations}
+          codeTitle={item.codeTitle}
+        />
+      );
     case ContentType.DEFINITION_LIST:
       return (
         <dl className="my-4 space-y-3">
-          {item.definitionItems?.map((dlItem: DefinitionListItem, index: number) => (
-            <div key={index} className="bg-stone-700 p-3 rounded-md border border-stone-600">
-              <dt style={baseFontSizeStyle('1.25rem')} className="text-xl font-bold text-stone-200" dangerouslySetInnerHTML={{ __html: dlItem.term }}></dt>
-              <dd style={baseFontSizeStyle('1.25rem')} className="text-xl text-stone-200 mr-4">{dlItem.definition}</dd>
+          {item.definitionItems?.map((dl, index) => (
+            <div key={index} className="bg-stone-800 p-4 rounded-md border border-stone-700 shadow">
+              <dt style={baseFontSizeStyle('1.125rem')} className="font-bold text-amber-400">{dl.term}</dt>
+              <dd style={baseFontSizeStyle('1.125rem')} className="text-stone-300 mr-4 mt-1" dangerouslySetInnerHTML={{ __html: dl.definition }} />
             </div>
           ))}
         </dl>
       );
     case ContentType.NOTE:
       return (
-        <div className="my-6 p-4 bg-amber-800 border-r-4 border-amber-600 rounded-md shadow">
-          {item.title && <p style={baseFontSizeStyle('1.25rem')} className="font-bold text-amber-200 mb-1 text-xl">{item.title}</p>}
-          <p style={baseFontSizeStyle('1.25rem')} className="text-xl text-amber-100 whitespace-pre-wrap font-code">{item.text}</p>
+        <div className="my-6 p-4 bg-amber-900/50 border-r-4 border-amber-500 rounded-md shadow">
+          {item.title && <p style={baseFontSizeStyle('1.125rem')} className="font-bold text-amber-300 mb-1">{item.title}</p>}
+          <p style={baseFontSizeStyle('1.125rem')} className="text-amber-100 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: item.text || ''}} />
         </div>
       );
     case ContentType.LINK:
       return (
-        <p style={baseFontSizeStyle('1.25rem')} className="my-2 text-xl">
-          <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:text-sky-200 hover:underline transition-colors">
+        <p style={baseFontSizeStyle('1.125rem')} className="my-2">
+          <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 hover:underline">
             {item.text || item.url}
           </a>
         </p>
       );
     case ContentType.PREFORMATTED_TEXT:
-       return (
-        <pre style={baseFontSizeStyle('1.25rem')} className="my-4 p-4 bg-stone-900 text-stone-200 rounded-md overflow-x-auto font-code border border-stone-700 text-xl">
+      return (
+        <pre style={baseFontSizeStyle('0.875rem')} className="my-4 p-4 bg-stone-900 text-stone-200 rounded-md overflow-x-auto font-code border border-stone-700">
           {item.text}
         </pre>
       );
     case ContentType.IMAGE_PLACEHOLDER:
-      // Use a consistent, curated image based on its alt text for relevance and stability
-      const hash = getHashFromString(item.alt || 'default-image');
-      const imageUrl = preselectedImages[hash % preselectedImages.length];
-
+      const imageKey = item.alt || item.text || 'default';
+      const imageUrl = preselectedImages[getHashFromString(imageKey) % preselectedImages.length];
       return (
-        <div className="my-4 flex justify-center bg-stone-700 p-2 rounded-lg">
+        <figure className="my-6">
           <img 
             src={imageUrl}
-            alt={item.alt || 'Placeholder Image'} 
-            className="rounded-md shadow-md opacity-90 object-cover"
-            width={item.width || 600}
-            height={item.height || 400}
-            loading="lazy"
+            alt={item.alt || 'Illustrative image'} 
+            width={item.width || 600} 
+            height={item.height || 400} 
+            className="rounded-md mx-auto shadow-lg" 
           />
-        </div>
+          {item.alt && <figcaption className="text-center text-stone-400 text-sm mt-2 italic">{item.alt}</figcaption>}
+        </figure>
       );
     default:
+      // This will give a warning in development if a new ContentType is added and not handled.
+      // const _exhaustiveCheck: never = item.type;
       return null;
   }
 };

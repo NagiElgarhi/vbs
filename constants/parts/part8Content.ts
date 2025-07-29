@@ -15,6 +15,70 @@ export const part8Content: Part = {
               content: [
                 { type: ContentType.PARAGRAPH, text: "حتى الآن، قمنا ببناء وتكوين خادمنا خطوة بخطوة، باستخدام أوامر مباشرة عبر SSH. هذه الطريقة رائعة للتعلم، لكنها تصبح كابوسًا في العالم الحقيقي. ماذا لو احتجت إلى إعداد 5 خوادم ويب متطابقة؟ ماذا لو تعطل خادمك بالكامل واحتجت إلى إعادة بنائه بسرعة من الصفر؟ الطريقة اليدوية بطيئة، عرضة للخطأ البشري، ومن المستحيل تكرارها بشكل موثوق." },
                 { type: ContentType.PARAGRAPH, text: "البنية التحتية ككود (Infrastructure as Code - IaC) هي ممارسة إدارة وتوفير البنية التحتية (الخوادم، موازنات التحميل، قواعد البيانات، الشبكات) من خلال ملفات تعريف يمكن قراءتها آليًا، بدلاً من التكوين المادي للأجهزة أو أدوات التكوين التفاعلية. أنت تكتب كودًا يصف البنية التحتية التي تريدها، وتقوم أداة IaC بجعلها حقيقة." },
+                { type: ContentType.HEADING4, text: "دراسة حالة: قبل وبعد IaC" },
+                { type: ContentType.PARAGRAPH, text: "لتوضيح القوة التحويلية لـ IaC، دعنا نقارن بين طريقتين لإعداد خادم ويب بسيط." },
+                {
+                  type: ContentType.CODE_EXPLANATION,
+                  codeTitle: "الطريقة القديمة: نص برمجي Bash",
+                  language: "bash",
+                  code: `#!/bin/bash
+# A script to set up a basic web server
+
+echo "Updating packages..."
+apt-get update -y
+
+echo "Installing Nginx..."
+apt-get install nginx -y
+
+echo "Creating web directory..."
+mkdir -p /var/www/my-app
+
+echo "Creating dummy index file..."
+echo "<h1>Hello from Bash</h1>" > /var/www/my-app/index.html
+
+echo "Configuring Nginx..."
+cat > /etc/nginx/sites-available/my-app << EOL
+server {
+    listen 80;
+    root /var/www/my-app;
+    index index.html;
+}
+EOL
+
+echo "Enabling site..."
+ln -s /etc/nginx/sites-available/my-app /etc/nginx/sites-enabled/
+
+echo "Restarting Nginx..."
+systemctl restart nginx
+
+echo "Done!"`,
+                  explanations: [
+                    { lines: "1-30", explanation: "**العيوب:** هذا النص حتمي (يحدد 'كيف')، طويل، وعرضة للخطأ. ليس له 'حالة' - إذا فشل في منتصف الطريق، فقد يترك النظام في حالة غير متسقة. تشغيله مرة أخرى قد يسبب أخطاء. التحقق مما إذا كان الخادم في الحالة الصحيحة أمر صعب." }
+                  ]
+                },
+                {
+                  type: ContentType.CODE_EXPLANATION,
+                  codeTitle: "طريقة IaC: ملف Terraform",
+                  language: "hcl",
+                  code: `resource "hcloud_server" "web" {
+  name        = "my-app-server"
+  server_type = "cpx11"
+  image       = "ubuntu-22.04"
+
+  user_data = <<-EOF
+    #cloud-config
+    packages:
+      - nginx
+    runcmd:
+      - mkdir -p /var/www/my-app
+      - echo "<h1>Hello from Terraform</h1>" > /var/www/my-app/index.html
+      # Nginx's default config is often sufficient for this
+  EOF
+}`,
+                  explanations: [
+                    { lines: "1-14", explanation: "**المزايا:** هذا الكود تصريحي (يصف 'ماذا'). إنه موجز، سهل القراءة، ويدير الحالة. Terraform يعرف ما إذا كان الخادم موجودًا بالفعل. يمكنك تشغيل `terraform apply` مائة مرة، وإذا لم يتغير شيء، فلن يتم إجراء أي تغييرات. إنه متسق وقابل للتكرار." }
+                  ]
+                },
                 { type: ContentType.HEADING4, text: "الفوائد التي تغير قواعد اللعبة:" },
                 { type: ContentType.DEFINITION_LIST, definitionItems: [
                     { term: "التكرار والثبات", definition: "يمكنك إنشاء نفس البيئة مرارًا وتكرارًا، مع ضمان أنها متطابقة في كل مرة. هذا يقضي على مشكلة 'لكنه يعمل على جهازي!'." },
@@ -22,7 +86,7 @@ export const part8Content: Part = {
                     { term: "التحكم في الإصدارات", definition: "يمكن تخزين كود البنية التحتية الخاص بك في Git. يمكنك تتبع كل تغيير، ومراجعة التغييرات عبر طلبات السحب (Pull Requests)، والعودة إلى إصدار سابق إذا حدث خطأ." },
                     { term: "تقليل المخاطر", definition: "الأتمتة تقلل بشكل كبير من مخاطر الخطأ البشري الذي يمكن أن يؤدي إلى تكوينات خاطئة أو انقطاع في الخدمة." },
                     { term: "التعاون", definition: "يمكن للفريق بأكمله رؤية وفهم والمساهمة في تعريف البنية التحتية، تمامًا مثل كود التطبيق." }
-                ]},
+                ]}
               ]
             },
             {
@@ -36,7 +100,7 @@ export const part8Content: Part = {
                     { term: "Ansible", definition: "الأداة الرائدة في إدارة التكوين. إنها أداة **حتمية** (imperative). أنت تكتب سلسلة من الخطوات (تثبيت nginx، نسخ هذا الملف، بدء الخدمة). إنه يتفوق في تكوين البرامج على خادم موجود بالفعل. لا يتطلب أي 'وكيل' (agent) على الخوادم، ويعمل عبر SSH." },
                     { term: "Pulumi", definition: "نهج أحدث يسمح لك بتعريف البنية التحتية باستخدام لغات برمجة للأغراض العامة مثل TypeScript أو Python أو Go. هذا يمنحك قوة الحلقات والوظائف والفئات، ولكنه يأتي مع تعقيد إضافي." }
                 ]},
-                { type: ContentType.NOTE, title: "Terraform + Ansible = فريق الأحلام", text: "النمط الأكثر شيوعًا وفعالية هو استخدام Terraform لتزويد البنية التحتية الأساسية (إنشاء الـ VPS، تكوين الشبكة)، ثم استخدام Ansible لتكوين البرامج داخل هذا الـ VPS (تثبيت Nginx، إعداد تطبيقك). هذا يفصل الاهتمامات ويسمح لكل أداة بالتألق في ما تفعله بشكل أفضل." },
+                { type: ContentType.NOTE, title: "Terraform + Ansible = فريق الأحلام", text: "النمط الأكثر شيوعًا وفعالية هو استخدام Terraform لتزويد البنية التحتية الأساسية (إنشاء الـ VPS، تكوين الشبكة وجدار الحماية)، ثم تمرير عنوان IP للخادم الجديد إلى Ansible. بعد ذلك، يتولى Ansible مهمة تكوين البرامج داخل هذا الـ VPS (تثبيت Nginx، إعداد تطبيقك، إنشاء المستخدمين). هذا يفصل الاهتمامات ويسمح لكل أداة بالتألق في ما تفعله بشكل أفضل. Terraform يبني المنزل، و Ansible يؤثثه." },
               ]
             },
             {
@@ -46,10 +110,10 @@ export const part8Content: Part = {
               content: [
                 { type: ContentType.PARAGRAPH, text: "فهم هذا الاختلاف هو المفتاح لفهم فلسفة أدوات IaC." },
                 { type: ContentType.HEADING4, text: "النهج الحتمي (Imperative) - 'كيف'" },
-                { type: ContentType.PARAGRAPH, text: "يشبه إعطاء تعليمات الطبخ خطوة بخطوة. أنت تحدد كل خطوة يجب اتخاذها للوصول إلى النتيجة النهائية. Ansible هو مثال جيد. أنت تكتب: `TASK 1: Install nginx`, `TASK 2: Copy config file`, `TASK 3: Start service`. أنت مسؤول عن المنطق والتسلسل." },
+                { type: ContentType.PARAGRAPH, text: "يشبه إعطاء تعليمات الطبخ خطوة بخطوة أو إعطاء توجيهات مفصلة لشخص ما. أنت تحدد كل خطوة يجب اتخاذها للوصول إلى النتيجة النهائية. Ansible هو مثال جيد. أنت تكتب: `TASK 1: Install nginx`, `TASK 2: Copy config file`, `TASK 3: Start service`. أنت مسؤول عن المنطق والتسلسل. إذا كان nginx مثبتًا بالفعل، يجب أن تكون المهمة ذكية بما يكفي لتخطيه." },
                 { type: ContentType.HEADING4, text: "النهج التصريحي (Declarative) - 'ماذا'" },
-                { type: ContentType.PARAGRAPH, text: "يشبه إظهار صورة للطبق النهائي للطاهي. أنت تصف الحالة النهائية التي تريدها، والأداة هي المسؤولة عن اكتشاف الخطوات اللازمة للوصول إلى هناك. Terraform هو مثال جيد. أنت تكتب: `resource \"hcloud_server\" \"web\" { image = \"ubuntu-22.04\" ... }`. لا تخبر Terraform بكيفية إنشاء الخادم؛ أنت فقط تصف كيف يجب أن يبدو. إذا قمت بتغيير `image` إلى `ubuntu-24.04`، فإن Terraform ذكي بما يكفي ليعرف أنه يجب عليه تدمير الخادم القديم وإنشاء واحد جديد." },
-                { type: ContentType.NOTE, title: "لماذا التصريحي قوي للبنية التحتية؟", text: "النهج التصريحي يمنع 'انحراف التكوين' (configuration drift). بمرور الوقت، يمكن أن تصبح التغييرات اليدوية على الخادم غير متزامنة مع التكوين الأصلي. مع Terraform، يمكنك دائمًا تشغيل `terraform plan` لرؤية الفرق بين الحالة الموصوفة في الكود الخاص بك والواقع الفعلي، ثم `terraform apply` لإعادة الواقع إلى التوافق مع الكود." },
+                { type: ContentType.PARAGRAPH, text: "يشبه إظهار صورة للطبق النهائي للطاهي أو إعطاء عنوان الوجهة لنظام تحديد المواقع العالمي (GPS). أنت تصف الحالة النهائية التي تريدها، والأداة هي المسؤولة عن اكتشاف الخطوات اللازمة للوصول إلى هناك من الحالة الحالية. Terraform هو مثال جيد. أنت تكتب: `resource \"hcloud_server\" \"web\" { image = \"ubuntu-22.04\" ... }`. لا تخبر Terraform بكيفية إنشاء الخادم؛ أنت فقط تصف كيف يجب أن يبدو. إذا قمت بتغيير `image` إلى `ubuntu-24.04`، فإن Terraform ذكي بما يكفي ليعرف أنه يجب عليه تدمير الخادم القديم وإنشاء واحد جديد." },
+                { type: ContentType.NOTE, title: "لماذا التصريحي قوي للبنية التحتية؟", text: "النهج التصريحي يمنع 'انحراف التكوين' (configuration drift). بمرور الوقت، يمكن أن تصبح التغييرات اليدوية على الخادم غير متزامنة مع التكوين الأصلي. مع Terraform، يمكنك دائمًا تشغيل `terraform plan` لرؤية الفرق بين الحالة الموصوفة في الكود الخاص بك والواقع الفعلي، ثم `terraform apply` لإعادة الواقع إلى التوافق مع الكود. إنه يفرض 'مصدر حقيقة' واحدًا." },
               ]
             },
             {
@@ -90,6 +154,7 @@ pip install ansible` },
 *.tfstate
 *.tfstate.*
 crash.log
+.terraform.lock.hcl
 
 # Ansible
 *.retry` },
@@ -141,45 +206,86 @@ resource "hcloud_ssh_key" "my_key" {
             {
               id: "p8_c2_s2",
               icon: "🚀",
-              title: "المستوى 181: إدارة خوادم VPS مع Terraform",
+              title: "المستوى 181: إعداد بنية تحتية واقعية: الخادم، القرص، وجدار الحماية",
               content: [
-                { type: ContentType.PARAGRAPH, text: "الآن بعد أن أصبح لدينا مفتاح SSH مُدار بواسطة Terraform، يمكننا استخدامه لإنشاء خادم. سنقوم بإضافة مورد `hcloud_server` إلى ملف `main.tf` الخاص بنا." },
-                { type: ContentType.CODE_EXPLANATION, language: "hcl", codeTitle: "إضافة مورد خادم", code: `resource "hcloud_server" "web_1" {
+                { type: ContentType.PARAGRAPH, text: "الآن، لنبني بنية تحتية أكثر واقعية. خادم واحد جيد، لكن الخادم الحقيقي يحتاج إلى تخزين دائم وجدار حماية. سنقوم بتوسيع تكويننا لإنشاء خادم، وقرص تخزين منفصل، وجدار حماية، ثم نربطهم جميعًا معًا." },
+                { type: ContentType.CODE_EXPLANATION, language: "hcl", codeTitle: "توسيع main.tf", code: `
+# ... (terraform, provider, and ssh_key blocks from previous level) ...
+
+# 1. إنشاء قرص تخزين منفصل
+resource "hcloud_volume" "app_data" {
+  name     = "my-app-data-vol"
+  size     = 10
+  location = "nbg1"
+  format   = "ext4"
+}
+
+# 2. إنشاء خادم الويب
+resource "hcloud_server" "web_1" {
   name        = "web-server-1"
   server_type = "cpx11"
   image       = "ubuntu-22.04"
   location    = "nbg1"
   ssh_keys    = [hcloud_ssh_key.my_key.id]
+}
+
+# 3. ربط القرص بالخادم
+resource "hcloud_volume_attachment" "app_data_attachment" {
+  volume_id = hcloud_volume.app_data.id
+  server_id = hcloud_server.web_1.id
+  automount = true
+}
+
+# 4. إنشاء جدار حماية
+resource "hcloud_firewall" "web_firewall" {
+  name = "web-firewall"
+  rule {
+    direction = "in"
+    protocol  = "tcp"
+    port      = "22"
+    source_ips = [
+      "0.0.0.0/0",
+      "::/0"
+    ]
+  }
+  rule {
+    direction = "in"
+    protocol  = "tcp"
+    port      = "80"
+    source_ips = ["0.0.0.0/0", "::/0"]
+  }
+  rule {
+    direction = "in"
+    protocol  = "tcp"
+    port      = "443"
+    source_ips = ["0.0.0.0/0", "::/0"]
+  }
+}
+
+# 5. تطبيق جدار الحماية على الخادم
+resource "hcloud_firewall_attachment" "fw_attachment" {
+  firewall_id = hcloud_firewall.web_firewall.id
+  server_ids  = [hcloud_server.web_1.id]
 }`, explanations: [
-                    { lines: "1-6", explanation: "نحدد اسم الخادم ونوعه وصورته وموقعه." },
-                    { lines: "7", explanation: "هذا يوضح قوة Terraform. بدلاً من كتابة اسم مفتاح SSH، نشير إلى مورد `hcloud_ssh_key.my_key` الذي أنشأناه سابقًا ونستخدم `id` الخاص به. هذا ينشئ تبعية صريحة. سيعرف Terraform أنه يجب عليه إنشاء مفتاح SSH *قبل* محاولة إنشاء الخادم." }
+                    { lines: "4-10", explanation: "نحدد مورد `hcloud_volume`. فصل بيانات التطبيق على قرص منفصل هو ممارسة جيدة للنسخ الاحتياطي والمرونة." },
+                    { lines: "22-26", explanation: "نحدد مورد `hcloud_volume_attachment`. لاحظ كيف نشير إلى `id` كل من القرص والخادم. هذا ينشئ تبعية، مما يضمن أن Terraform سينشئ كلاهما قبل محاولة الربط." },
+                    { lines: "29-54", explanation: "نحدد مورد `hcloud_firewall` مع قواعد للسماح بالاتصالات الواردة على منافذ SSH و HTTP و HTTPS." },
+                    { lines: "57-60", explanation: "أخيرًا، نستخدم `hcloud_firewall_attachment` لتطبيق مجموعة القواعد هذه على خادمنا. هذا يوضح قوة الربط بين الموارد في Terraform." }
                 ]},
-                { type: ContentType.PARAGRAPH, text: "بعد تشغيل `terraform apply`، سيتم إنشاء خادم VPS جديد بالكامل ومكون بمفتاح SSH الخاص بك في بضع دقائق." },
+                { type: ContentType.PARAGRAPH, text: "بعد تشغيل `terraform apply` على هذا التكوين، سيكون لديك بنية تحتية صغيرة ولكنها كاملة وجاهزة للإنتاج، تم إنشاؤها بالكامل من الكود." },
               ]
             },
             {
               id: "p8_c2_s3",
               icon: "💾",
-              title: "المستوى 182: فهم حالة Terraform (State) وإدارتها عن بعد",
+              title: "المستوى 182: كشف خبايا حالة Terraform",
               content: [
                 { type: ContentType.PARAGRAPH, text: "بعد تشغيل `apply`، ستلاحظ ملفًا جديدًا: `terraform.tfstate`. هذا الملف هو دماغ Terraform. إنه ملف JSON يسجل الموارد التي قمت بإنشائها، ومعرفاتها الفعلية في العالم الحقيقي (مثل معرف الخادم في Hetzner)، وجميع سماتها. عندما تقوم بتشغيل `plan`، يقارن Terraform بين الكود الخاص بك، وملف الحالة هذا، والواقع لمعرفة ما تغير." },
-                { type: ContentType.HEADING4, text: "مشاكل الحالة المحلية" },
-                { type: ContentType.LIST_UNORDERED, items: [
-                    "<strong>خطر:</strong> يحتوي على أسرار محتملة في نص عادي.",
-                    "<strong>فردي:</strong> إذا كان لديك فريق، فكيف تشارك ملف الحالة؟ إرساله عبر البريد الإلكتر الإلكتروني أو Slack هو وصفة لكارثة.",
-                    "<strong>قفل:</strong> ماذا لو حاول شخصان تشغيل `apply` في نفس الوقت؟ قد يؤدي ذلك إلى إفساد الحالة."
-                ]},
-                { type: ContentType.HEADING4, text: "الحل: الواجهات الخلفية عن بعد (Remote Backends)" },
-                { type: ContentType.PARAGRAPH, text: "الواجهة الخلفية عن بعد تخبر Terraform بتخزين ملف الحالة في موقع مشترك ومؤمن بدلاً من جهازك المحلي. توفر الخدمات مثل Terraform Cloud أو AWS S3 واجهات خلفية تدعم التخزين عن بعد، وقفل الحالة (لمنع التشغيل المتزامن)، والتشفير في حالة السكون." },
-                { type: ContentType.CODE_BLOCK, language: "hcl", codeTitle: "تكوين الواجهة الخلفية السحابية لـ Terraform", code: `terraform {
-  cloud {
-    organization = "your-org-name"
-    workspaces {
-      name = "production-infra"
-    }
-  }
-  # ... required_providers
-}` },
+                { type: ContentType.HEADING4, text: "خطر انحراف الحالة (State Drift)" },
+                { type: ContentType.PARAGRAPH, text: "ماذا لو قمت، بعد نشر جدار الحماية، بتسجيل الدخول إلى لوحة تحكم Hetzner وأضفت قاعدة للسماح بالمنفذ 8080 يدويًا؟ لقد أنشأت الآن 'انحرافًا'. العالم الحقيقي لم يعد يطابق ما هو مسجل في ملف الحالة الخاص بك. في المرة التالية التي تقوم فيها بتشغيل `terraform plan`، سيكتشف Terraform هذا الانحراف ويقترح تغييرًا لإزالة القاعدة 8080 'لإصلاح' الواقع ليعود متوافقًا مع الكود. هذه ميزة قوية للغاية لمنع التغييرات اليدوية غير الموثقة." },
+                { type: ContentType.HEADING4, text: "أهمية قفل الحالة (State Locking)" },
+                { type: ContentType.PARAGRAPH, text: "تخيل أنك وزميلك تعملان على نفس البنية التحتية. تقوم بتشغيل `terraform apply` لإضافة خادم جديد. في نفس الوقت بالضبط، يقوم زميلك بتشغيل `apply` لتغيير نوع خادم موجود. كلا العمليتين ستقرأان نفس ملف الحالة الأولي، لكن كلاهما سيحاول كتابة ملف حالة جديد في النهاية. العملية التي تنتهي أخيرًا ست sobrescribe تغييرات الأخرى، مما يؤدي إلى إفساد الحالة وفقدان تتبع الموارد. هذه حالة سباق (race condition)." },
+                { type: ContentType.NOTE, title: "الحل: الواجهات الخلفية عن بعد (Remote Backends)", text: "الواجهة الخلفية عن بعد تحل كلتا المشكلتين. إنها تخبر Terraform بتخزين ملف الحالة في موقع مشترك ومؤمن (مثل AWS S3 أو Terraform Cloud). الأهم من ذلك، أن الواجهات الخلفية عن بعد تدعم **قفل الحالة**. قبل أن يبدأ Terraform أي عملية كتابة، فإنه 'يقفل' الحالة. إذا حاول شخص آخر تشغيل `apply` في نفس الوقت، فسيرى رسالة بأن الحالة مقفلة وسيتعين عليه الانتظار. هذا يضمن أن عملية واحدة فقط يمكنها تعديل البنية التحتية في كل مرة، مما يمنع إفساد الحالة." },
               ]
             },
             {
@@ -194,11 +300,18 @@ resource "hcloud_ssh_key" "my_key" {
   description = "The type of server to provision."
   type        = string
   default     = "cpx11"
+}
+
+variable "location" {
+  description = "The Hetzner location to deploy to."
+  type = string
+  default = "nbg1"
 }` },
                 { type: ContentType.PARAGRAPH, text: "الآن في `main.tf`، يمكنك استخدامه:" },
                 { type: ContentType.CODE_BLOCK, language: "hcl", code: `resource "hcloud_server" "web_1" {
   # ...
   server_type = var.server_type
+  location    = var.location
   # ...
 }` },
                 { type: ContentType.HEADING4, text: "المخرجات (Outputs)" },
@@ -213,27 +326,51 @@ resource "hcloud_ssh_key" "my_key" {
             {
               id: "p8_c2_s5",
               icon: "🧩",
-              title: "المستوى 184: تنظيم الكود باستخدام الوحدات (Modules)",
+              title: "المستوى 184: دراسة حالة: إنشاء وحدة خادم ويب قابلة لإعادة الاستخدام",
               content: [
-                { type: ContentType.PARAGRAPH, text: "مع نمو البنية التحتية الخاصة بك، يصبح وضع كل شيء في ملف واحد فوضويًا. الوحدات هي الطريقة لتنظيم وإعادة استخدام كود Terraform. الوحدة هي مجرد مجموعة من ملفات `.tf` في دليل." },
-                { type: ContentType.HEADING4, text: "إنشاء وحدة خادم ويب" },
-                { type: ContentType.PARAGRAPH, text: "لنفترض أن لدينا بنية دليل مثل:" },
-                { type: ContentType.PREFORMATTED_TEXT, text: `modules/
-  web-server/
-    main.tf
-    variables.tf
-    outputs.tf
-main.tf` },
-                { type: ContentType.PARAGRAPH, text: "ملف `modules/web-server/main.tf` سيحتوي على تعريف موارد الخادم ومفتاح SSH. الآن، في ملف `main.tf` الجذري، يمكنك استدعاء هذه الوحدة:" },
-                { type: ContentType.CODE_BLOCK, language: "hcl", code: `module "web_server_prod" {
-  source      = "./modules/web-server"
-  server_type = "cpx21"
+                { type: ContentType.PARAGRAPH, text: "مع نمو البنية التحتية الخاصة بك، يصبح وضع كل شيء في ملف واحد فوضويًا. الوحدات هي الطريقة لتنظيم وإعادة استخدام كود Terraform. الوحدة هي مجرد مجموعة من ملفات `.tf` في دليل. لنقم بتحويل البنية التحتية لخادمنا إلى وحدة قابلة لإعادة الاستخدام." },
+                { type: ContentType.HEADING4, text: "هيكل الوحدة" },
+                { type: ContentType.PREFORMATTED_TEXT, text: `project/
+├── modules/
+│   └── webserver/
+│       ├── main.tf       # Defines the resources (server, volume, firewall)
+│       ├── variables.tf  # Defines input variables for the module
+│       └── outputs.tf    # Defines output values from the module
+└── main.tf               # Root module that calls the webserver module` },
+                { type: ContentType.CODE_BLOCK, language: "hcl", codeTitle: "modules/webserver/variables.tf", code: `variable "server_name" {
+  description = "The name of the web server."
+  type        = string
+}` },
+                 { type: ContentType.CODE_BLOCK, language: "hcl", codeTitle: "modules/webserver/main.tf", code: `# This file now contains all the resource definitions
+# for server, volume, firewall, attachments, etc.
+# but it uses variables for customization.
+resource "hcloud_server" "web" {
+  name = var.server_name
+  # ... other properties ...
+}` },
+                { type: ContentType.CODE_BLOCK, language: "hcl", codeTitle: "modules/webserver/outputs.tf", code: `output "ip_address" {
+  value = hcloud_server.web.ipv4_address
+}` },
+                { type: ContentType.HEADING4, text: "استدعاء الوحدة" },
+                { type: ContentType.PARAGRAPH, text: "الآن، ملف `main.tf` الجذري يصبح بسيطًا للغاية. يمكننا استدعاء وحدتنا لإنشاء بيئات متعددة:" },
+                { type: ContentType.CODE_BLOCK, language: "hcl", codeTitle: "project/main.tf", code: `module "staging_server" {
+  source      = "./modules/webserver"
+  server_name = "web-staging-01"
 }
 
-output "prod_server_ip" {
-  value = module.web_server_prod.ip_address
+module "production_server" {
+  source      = "./modules/webserver"
+  server_name = "web-prod-01"
+}
+
+output "staging_ip" {
+  value = module.staging_server.ip_address
+}
+
+output "production_ip" {
+  value = module.production_server.ip_address
 }` },
-                { type: ContentType.NOTE, title: "سجل Terraform (Terraform Registry)", text: "هناك سجل عام ضخم للوحدات التي أنشأها المجتمع والموردون الرسميون. قبل أن تكتب وحدة بنفسك، تحقق دائمًا من السجل أولاً. يمكنك العثور على وحدات تم اختبارها جيدًا لكل شيء بدءًا من إعداد VPC في AWS إلى نشر كتلة Kubernetes." },
+                { type: ContentType.PARAGRAPH, text: "هذا يوضح قوة الوحدات. لقد قمنا بتجريد تعقيد إنشاء خادم ويب كامل في كتلة بسيطة وقابلة لإعادة الاستخدام، مما يجعل الكود الجذري نظيفًا وسهل الفهم." },
               ]
             }
         ]
@@ -260,34 +397,59 @@ output "prod_server_ip" {
             {
               id: "p8_c3_s2",
               icon: "🎭",
-              title: "المستوى 186: كتابة أول Playbook لتثبيت Nginx",
+              title: "المستوى 186: بناء Playbook احترافي (القوالب والمعالجات)",
               content: [
-                { type: ContentType.PARAGRAPH, text: "لنكتب playbook بسيطًا يقوم بتثبيت Nginx على خادمنا." },
+                { type: ContentType.PARAGRAPH, text: "لنكتب playbook أكثر احترافية لتثبيت وتكوين Nginx. بدلاً من مجرد التثبيت، سنستخدم قالبًا لإنشاء ملف تكوين ديناميكي وسنستخدم معالجًا لإعادة تشغيل Nginx فقط عند الضرورة." },
                 { type: ContentType.CODE_BLOCK, language: "ini", codeTitle: "inventory", code: `[webservers]
 web-1 ansible_host=YOUR_SERVER_IP ansible_user=nagi` },
+                { type: ContentType.PARAGRAPH, text: "سنحتاج إلى ملف قالب. هذا الملف هو ملف تكوين عادي، ولكنه يمكن أن يحتوي على متغيرات Ansible." },
+                { type: ContentType.CODE_BLOCK, language: "jinja2", codeTitle: "templates/nginx.conf.j2", code: `server {
+    listen 80;
+    server_name {{ server_name }};
+    root /var/www/{{ server_name }};
+    index index.html;
+}` },
                 { type: ContentType.CODE_EXPLANATION, language: "yaml", codeTitle: "nginx_playbook.yml", code: `---
 - name: Install and configure Nginx
   hosts: webservers
   become: yes
+  vars:
+    server_name: "my-awesome-app.com"
   tasks:
     - name: Install Nginx
       ansible.builtin.apt:
         name: nginx
         state: latest
-        update_cache: yes
 
-    - name: Ensure Nginx is started and enabled
+    - name: Create web directory
+      ansible.builtin.file:
+        path: "/var/www/{{ server_name }}"
+        state: directory
+
+    - name: Copy Nginx config from template
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: "/etc/nginx/sites-available/{{ server_name }}"
+      notify: Restart Nginx
+
+    - name: Enable site
+      ansible.builtin.file:
+        src: "/etc/nginx/sites-available/{{ server_name }}"
+        dest: "/etc/nginx/sites-enabled/{{ server_name }}"
+        state: link
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
       ansible.builtin.service:
         name: nginx
-        state: started
-        enabled: yes`, explanations: [
-                    { lines: "3", explanation: "`hosts: webservers` يخبر Ansible بتشغيل هذا الكتاب المسرحي على جميع المضيفين في مجموعة `webservers` في ملف المخزون." },
-                    { lines: "4", explanation: "`become: yes` يعادل `sudo`. يخبر Ansible بتصعيد الامتيازات لتنفيذ المهام." },
-                    { lines: "7", explanation: "هذه المهمة تستخدم وحدة `apt` المدمجة." },
-                    { lines: "13", explanation: "هذه المهمة تستخدم وحدة `service` لضمان أن الخدمة قيد التشغيل وممكّنة عند الإقلاع." }
+        state: restarted`, explanations: [
+                    { lines: "5-6", explanation: "نحدد متغيرًا يمكن استخدامه في جميع أنحاء الـ playbook والقوالب." },
+                    { lines: "19", explanation: "مهمة `template` تأخذ ملف `.j2`، وتعوض المتغيرات، وتضع الملف الناتج على الخادم البعيد." },
+                    { lines: "22", explanation: "هذا هو المفتاح. `notify: Restart Nginx` يخبر Ansible أنه إذا تغير هذا الملف، فيجب عليه تشغيل المعالج المسمى 'Restart Nginx' في نهاية الـ play." },
+                    { lines: "30-34", explanation: "يتم تعريف المعالجات في قسم منفصل. لن يتم تشغيل هذا المعالج إلا إذا أبلغته مهمة واحدة على الأقل. هذا يمنع إعادة تشغيل Nginx دون داعٍ." }
                 ]},
-                { type: ContentType.PARAGRAPH, text: "لتشغيله:" },
-                { type: ContentType.CODE_BLOCK, language: "bash", code: `ansible-playbook -i inventory nginx_playbook.yml` },
+                { type: ContentType.PARAGRAPH, text: "لتشغيله: `ansible-playbook -i inventory nginx_playbook.yml`" },
               ]
             },
             {
@@ -335,7 +497,17 @@ ansible-vault edit vars/secrets.yml` },
               title: "المستوى 189: دمج Terraform و Ansible",
               content: [
                 { type: ContentType.PARAGRAPH, text: "النمط الكلاسيكي هو استخدام Terraform لإنشاء البنية التحتية، ثم استخدام Ansible لتكوينها. الطريقة الأكثر شيوعًا ومرونة لتحقيق ذلك هي جعل Terraform ينشئ ملف مخزون Ansible ديناميكيًا." },
-                { type: ContentType.CODE_EXPLANATION, language: "hcl", codeTitle: "إنشاء مخزون من Terraform", code: `resource "local_file" "ansible_inventory" {
+                { type: ContentType.PARAGRAPH, text: "أولاً، سنحتاج إلى ملف قالب للمخزون." },
+                 { type: ContentType.CODE_BLOCK, language: "jinja2", codeTitle: "templates/inventory.tpl", code: `[webservers]
+web-1 ansible_host=\${web_server_ip}
+
+[all:vars]
+ansible_user=nagi
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_python_interpreter=/usr/bin/python3
+` },
+                {
+                  type: ContentType.CODE_EXPLANATION, language: "hcl", codeTitle: "إنشاء مخزون من Terraform (outputs.tf)", code: `resource "local_file" "ansible_inventory" {
   content = templatefile("templates/inventory.tpl", {
     web_server_ip = hcloud_server.web_1.ipv4_address
   })
@@ -343,13 +515,9 @@ ansible-vault edit vars/secrets.yml` },
 }`, explanations: [
                     { lines: "1", explanation: "نستخدم مورد `local_file` لإنشاء ملف على جهازنا المحلي." },
                     { lines: "2", explanation: "نستخدم دالة `templatefile` لمعالجة ملف قالب. نمرر عنوان IP للخادم الذي أنشأناه كمتغير." },
-                    { lines: "5", explanation: "نحدد المسار حيث سيتم إنشاء ملف المخزون النهائي." }
+                    { lines: "5", explanation: "نحدد المسار حيث سيتم إنشاء ملف المخزون النهائي، مباشرة في مجلد Ansible." }
                 ]},
-                { type: ContentType.PARAGRAPH, text: "سير العمل الكامل الخاص بك يصبح:" },
-                { type: ContentType.CODE_BLOCK, language: "bash", code: `cd terraform/
-terraform apply -auto-approve
-cd ../ansible/
-ansible-playbook -i inventory playbook.yml` },
+                { type: ContentType.NOTE, title: "سير العمل الكامل", text: "سير العمل الكامل الخاص بك يصبح: \n1. `cd terraform/` \n2. `terraform apply -auto-approve` \n3. `cd ../ansible/` \n4. `ansible-playbook -i inventory playbook.yml` \n\nهذا يوضح الفصل الواضح بين الاهتمامات: Terraform يتعامل مع 'ماذا' (البنية التحتية)، و Ansible يتعامل مع 'كيف' (التكوين)." },
               ]
             }
         ]
@@ -390,12 +558,10 @@ ansible-playbook -i inventory playbook.yml` },
             {
               id: "p8_c4_s3",
               icon: "🏗️",
-              title: "المستوى 192: إدارة موارد AWS/GCP باستخدام Terraform",
+              title: "دراسة حالة: بناء بنية تحتية ويب قابلة للتطوير على AWS",
               content: [
-                { type: ContentType.PARAGRAPH, text: "هنا تتألق IaC حقًا. إدارة شبكة سحابية معقدة يدويًا عبر واجهة المستخدم ('ClickOps') أمر محكوم عليه بالفشل. Terraform يسمح لك بتعريف كل شيء في الكود." },
-                { type: ContentType.CODE_BLOCK, language: "hcl", codeTitle: "مثال على AWS Terraform", code: `provider "aws" {
-  region = "eu-west-1"
-}
+                { type: ContentType.PARAGRAPH, text: "هنا تتألق IaC حقًا. لنقم ببناء بنية تحتية ويب حقيقية وقابلة للتطوير وعالية التوافر على AWS باستخدام Terraform. هذا المثال يوضح كيف يمكن استخدام خدمات متعددة معًا لإنشاء نظام قوي." },
+                { type: ContentType.CODE_EXPLANATION, language: "hcl", codeTitle: "بنية تحتية ويب قابلة للتطوير على AWS", code: `provider "aws" { region = "eu-central-1" }
 
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
@@ -404,19 +570,75 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   vpc_id     = aws_vpc.main.id
   cidr_block = "10.0.1.0/24"
+  map_public_ip_on_launch = true # Instances get a public IP
 }
 
-resource "aws_security_group" "web" {
-  # ... rules to allow SSH and HTTP ...
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
 }
 
-resource "aws_instance" "app_server" {
-  ami           = "ami-0c55b159cbfafe1f0" # Ubuntu 22.04
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+}
+
+resource "aws_route_table_association" "a" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_security_group" "web_sg" {
+  vpc_id = aws_vpc.main.id
+  ingress { # Inbound rule for HTTP
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress { # Allow all outbound traffic
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_launch_template" "web_template" {
+  name_prefix   = "web-"
+  image_id      = "ami-0c55b159cbfafe1f0" # Ubuntu 22.04
   instance_type = "t2.micro"
-  subnet_id     = aws_subnet.public.id
-  # ...
-}` },
-                { type: ContentType.PARAGRAPH, text: "لاحظ كيف أننا لا ننشئ فقط خادمًا، بل نحدد الشبكة بأكملها التي يعيش فيها. هذا هو مستوى التحكم الذي توفره السحابة و IaC." },
+  security_group_names = [aws_security_group.web_sg.name]
+  user_data = base64encode(<<-EOF
+    #!/bin/bash
+    sudo apt-get update
+    sudo apt-get install -y nginx
+    sudo systemctl start nginx
+  EOF
+  )
+}
+
+resource "aws_autoscaling_group" "web_asg" {
+  launch_template {
+    id      = aws_launch_template.web_template.id
+    version = "$Latest"
+  }
+  min_size = 2
+  max_size = 5
+  desired_capacity = 2
+  vpc_zone_identifier = [aws_subnet.public.id]
+
+  # Example scaling policy
+  # (Requires more setup like CloudWatch alarms)
+}`, explanations: [
+                    { lines: "3-10", explanation: "نحدد شبكتنا الخاصة (VPC) وشبكة فرعية عامة واحدة." },
+                    { lines: "12-28", explanation: "ننشئ بوابة إنترنت ونقوم بتوجيه كل حركة المرور من شبكتنا الفرعية إليها، مما يمنحها الوصول إلى الإنترنت." },
+                    { lines: "30-46", explanation: "نحدد مجموعة أمان (جدار حماية) تسمح بحركة مرور HTTP الواردة من أي مكان." },
+                    { lines: "48-61", explanation: "نحدد `aws_launch_template`. هذا هو مخطط لخوادمنا. يحدد نوع المثيل، وصورة النظام، ومجموعات الأمان، و `user_data` (نص برمجي يتم تشغيله عند بدء التشغيل)." },
+                    { lines: "63-74", explanation: "أخيرًا، نحدد `aws_autoscaling_group`. هذا يخبر AWS بالحفاظ على عدد معين من المثيلات قيد التشغيل دائمًا (بين 2 و 5). إذا فشل مثيل، ستقوم مجموعة التوسع التلقائي بإنشاء واحد جديد تلقائيًا (الشفاء الذاتي)." }
+                ]},
               ]
             },
             {
@@ -474,30 +696,109 @@ resource "aws_instance" "app_server" {
             {
               id: "p8_c5_s2",
               icon: "🔁",
-              title: "المستوى 196: خطوط أنابيب CI/CD للبنية التحتية",
+              title: "دراسة حالة: خط أنابيب CI/CD للبنية التحتية",
               content: [
-                { type: ContentType.PARAGRAPH, text: "يمكننا تطبيق نفس مبادئ CI/CD التي تعلمناها لتطبيقاتنا على كود البنية التحتية لدينا. سير عمل GitHub Actions نموذجي سيبدو كالتالي:" },
-                { type: ContentType.HEADING4, text: "عند إنشاء طلب سحب (Pull Request):" },
-                { type: ContentType.LIST_UNORDERED, items: [
-                    "شغّل `terraform init`.",
-                    "شغّل `terraform validate` للتحقق من بناء الجملة.",
-                    "شغّل `terraform plan` لإنشاء خطة.",
-                    "انشر الخطة كتعليق على طلب السحب ليتمكن المراجعون من رؤية التأثير الدقيق للتغيير."
-                ]},
-                { type: ContentType.HEADING4, text: "عند الدمج في `main`:" },
-                { type: ContentType.LIST_UNORDERED, items: [
-                    "شغّل `terraform init`.",
-                    "شغّل `terraform apply -auto-approve` لتطبيق التغييرات على بيئة الإنتاج."
+                { type: ContentType.PARAGRAPH, text: "يمكننا تطبيق نفس مبادئ CI/CD التي تعلمناها لتطبيقاتنا على كود البنية التحتية لدينا. هذا مثال كامل لسير عمل GitHub Actions لـ Terraform." },
+                { type: ContentType.CODE_EXPLANATION, language: "yaml", codeTitle: ".github/workflows/terraform.yml", code: `name: 'Terraform CI/CD'
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          HCLOUD_TOKEN: \${{ secrets.HCLOUD_TOKEN }}
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Plan
+        id: plan
+        if: github.event_name == 'pull_request'
+        run: terraform plan -no-color
+        env:
+          HCLOUD_TOKEN: \${{ secrets.HCLOUD_TOKEN }}
+      
+      - name: Add Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = \`#### Terraform Plan 📖\`
+            \`\`\`hcl
+            \${{ steps.plan.outputs.stdout }}
+            \`\`\`
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+            
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        env:
+          HCLOUD_TOKEN: \${{ secrets.HCLOUD_TOKEN }}
+`, explanations: [
+                    { lines: "22-27", explanation: "نقوم بتشغيل `terraform plan` فقط إذا كان الحدث هو طلب سحب." },
+                    { lines: "29-43", explanation: "هذه خطوة ذكية تستخدم `github-script` لأخذ مخرجات خطوة الخطة ونشرها كتعليق مباشرة على طلب السحب. هذا يسمح للمراجعين برؤية التأثير الدقيق للتغيير المقترح." },
+                    { lines: "45-49", explanation: "نقوم بتشغيل `terraform apply` فقط عندما يتم دمج التغييرات في الفرع `main`." }
                 ]},
               ]
             },
             {
               id: "p8_c5_s3",
               icon: "🖼️",
-              title: "المستوى 197: مقدمة إلى Packer لبناء صور الآلات",
+              title: "دراسة حالة: بناء 'صورة ذهبية' مع Packer",
               content: [
                 { type: ContentType.PARAGRAPH, text: "Packer هي أداة أخرى من HashiCorp. وظيفتها هي أتمتة إنشاء صور الآلات. بدلاً من البدء بصورة أوبونتو خام ثم استخدام Ansible لتثبيت Nginx في كل مرة تقوم فيها بإنشاء خادم، يمكنك استخدام Packer لإنشاء 'صورة ذهبية' (golden image) تحتوي بالفعل على Nginx وكل تكويناتك الأساسية مثبتة مسبقًا." },
-                { type: ContentType.PARAGRAPH, text: "ثم، في Terraform، يمكنك ببساطة الإشارة إلى هذه الصورة المخصصة. هذا يجعل أوقات تزويد الخادم أسرع بكثير وأكثر موثوقية، حيث يتم 'خبز' التكوين في الصورة نفسها." },
+                 { type: ContentType.CODE_EXPLANATION, language: "hcl", codeTitle: "ubuntu-nginx.pkr.hcl", code: `packer {
+  required_plugins {
+    hetzner-cloud = {
+      version = ">= 1.2.0"
+      source  = "github.com/hetznercloud/hetzner-cloud"
+    }
+  }
+}
+
+source "hetzner-cloud" "ubuntu-nginx" {
+  token        = var.hcloud_token
+  server_type  = "cpx11"
+  image        = "ubuntu-22.04"
+  location     = "fsn1"
+  snapshot_name = "ubuntu-2204-nginx-{{timestamp}}"
+}
+
+build {
+  sources = ["source.hetzner-cloud.ubuntu-nginx"]
+
+  provisioner "shell" {
+    inline = [
+      "sleep 30",
+      "sudo apt-get update",
+      "sudo apt-get install -y nginx",
+      "sudo systemctl enable nginx"
+    ]
+  }
+}`, explanations: [
+                    { lines: "11-17", explanation: "نحدد 'المنشئ' (builder). نخبر Packer باستخدام Hetzner Cloud، وبدء خادم مؤقت من صورة أوبونتو، وإعطاء اللقطة الناتجة اسمًا فريدًا." },
+                    { lines: "22-29", explanation: "نحدد 'المزود' (provisioner). هذا يخبر Packer بكيفية تكوين الخادم المؤقت. هنا، نستخدم مزود `shell` لتشغيل بعض الأوامر لتحديث النظام وتثبيت Nginx." }
+                ]},
+                { type: ContentType.PARAGRAPH, text: "عند تشغيل `packer build .`، سيقوم Packer بإنشاء خادم، وتشغيل هذه الأوامر، ثم أخذ لقطة (snapshot) من الخادم، وتدمير الخادم المؤقت. النتيجة هي صورة مخصصة يمكنك استخدام `id` الخاص بها مباشرة في مورد `hcloud_server` في Terraform، مما يجعل أوقات التزويد أسرع بكثير." },
               ]
             },
             {

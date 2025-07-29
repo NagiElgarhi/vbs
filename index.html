@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" style="scroll-behavior: smooth; --font-size-multiplier: 1;">
 <head>
@@ -28,20 +29,20 @@
       border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb {
-      background: #78716c; /* Lighter thumb */
+      background: #f59e0b; /* amber-500 */
       border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #a8a29e; /* Even lighter thumb on hover */
+      background: #fcd34d; /* amber-300 */
     }
     
     .decorative-frame {
-      border: 2px solid #b48a3c; /* Outer gold border */
+      border: 2px solid #b8860b; /* DarkGoldenRod */
       background: linear-gradient(145deg, #292524, #1c1917);
       padding: 1rem;
       position: relative;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(212, 175, 55, 0.2), inset 0 0 10px rgba(0,0,0,0.5);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.25), inset 0 0 10px rgba(0,0,0,0.6);
     }
     .decorative-frame::before {
       content: '';
@@ -50,9 +51,12 @@
       left: 8px;
       right: 8px;
       bottom: 8px;
-      border: 1px solid #926c2e; /* Inner gold border */
+      border: 1px solid #d4af37; /* Gold */
       border-radius: 5px;
       pointer-events: none;
+    }
+    .welcome-text-shadow {
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
     }
   </style>
 <script type="importmap">

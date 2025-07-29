@@ -92,7 +92,9 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [chatHistory]);
   
   useEffect(() => {
@@ -145,14 +147,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
   }, [isDragging, dragStart]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files ? event.target.files[0] : null;
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-        const base64Data = dataUrl.split(',')[1];
-        setUploadedImage({ data: base64Data, mimeType, preview: dataUrl });
+        const dataUrl = e.target && e.target.result ? (e.target.result as string) : '';
+        if (dataUrl) {
+            const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+            const base64Data = dataUrl.split(',')[1];
+            setUploadedImage({ data: base64Data, mimeType, preview: dataUrl });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -160,7 +164,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
   
   const toggleRecording = () => {
     if (isRecording) {
-      recognitionRef.current?.stop();
+      if (recognitionRef.current) recognitionRef.current.stop();
       setIsRecording(false);
       return;
     }
@@ -209,7 +213,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
     const newUserMessage: ChatMessage = { 
       sender: 'user', 
       text: userInput,
-      imagePreview: uploadedImage?.preview
+      imagePreview: uploadedImage ? uploadedImage.preview : undefined
     };
     setChatHistory(prev => [...prev, newUserMessage]);
     const currentInput = userInput;
@@ -328,7 +332,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
               />
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }}
                 title="رفع صورة"
                 className="p-2 text-stone-300 hover:text-white disabled:text-stone-500"
                 disabled={isLoading}
