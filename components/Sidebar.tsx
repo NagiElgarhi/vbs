@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Book, Part, Chapter, ChapterSection, SearchResult } from '../types';
 
 interface SidebarProps {
@@ -30,16 +29,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
 
-  // Reset view when sidebar is closed/opened
+  const allSectionIds = useMemo(() => {
+    const ids: string[] = [];
+    book.parts.forEach(part => {
+      part.chapters.forEach(chapter => {
+        chapter.sections.forEach(section => {
+          ids.push(section.id);
+        });
+      });
+    });
+    return ids;
+  }, [book]);
+
+  const progressPercentage = useMemo(() => {
+    if (!activeSectionId || allSectionIds.length === 0) return 0;
+    
+    const currentIndex = allSectionIds.indexOf(activeSectionId);
+    if (currentIndex === -1) return 0;
+    
+    return Math.round(((currentIndex + 1) / allSectionIds.length) * 100);
+  }, [activeSectionId, allSectionIds]);
+
+
+  // When a section is selected from outside (e.g., search), sync the sidebar view
   useEffect(() => {
-    if (!isOpen) {
-      setTimeout(() => { // Delay reset to avoid seeing it during closing animation
-        setView('parts');
-        setSelectedPart(null);
-        setSelectedChapter(null);
-      }, 300);
+    if (activeSectionId && isOpen) {
+        let found = false;
+        for (const part of book.parts) {
+            for (const chapter of part.chapters) {
+                if (chapter.sections.some(section => section.id === activeSectionId)) {
+                    setSelectedPart(part);
+                    setSelectedChapter(chapter);
+                    setView('sections');
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
     }
-  }, [isOpen]);
+  }, [activeSectionId, isOpen, book.parts]);
 
 
   const handlePartClick = (part: Part) => {
@@ -211,7 +240,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
       
-      <nav aria-label="فهرس الكتاب" className="flex-grow overflow-y-auto px-3 pt-3 pb-6">
+       {/* Progress Bar */}
+       <div className="px-4 py-3 border-b border-stone-600">
+        <div className="flex justify-between mb-1 text-sm font-medium text-stone-200">
+          <span>تقدم القراءة</span>
+          <span className="font-code">{progressPercentage}%</span>
+        </div>
+        <div className="w-full bg-stone-900 rounded-full h-2">
+          <div 
+            className="bg-amber-400 h-2 rounded-full transition-all duration-500 ease-in-out" 
+            style={{ width: `${progressPercentage}%` }}
+            role="progressbar"
+            aria-valuenow={progressPercentage}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Reading progress"
+          ></div>
+        </div>
+      </div>
+
+      <nav aria-label="فهرس الكتاب" className="flex-grow overflow-y-auto px-3 py-3 pb-6">
         {searchQuery.length < 3 ? (
             renderContent()
         ) : (

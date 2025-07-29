@@ -48,12 +48,12 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
     case ContentType.HEADING3: // Used for section titles within EbookReaderPage's direct mapping
       return <h3 style={baseFontSizeStyle('1.25rem')} className="text-xl font-semibold text-stone-100 mt-6 mb-3">{item.text}</h3>;
     case ContentType.HEADING4:
-      return <h4 style={baseFontSizeStyle('1.125rem')} className="text-lg font-bold text-stone-100 mt-4 mb-2">{item.text}</h4>;
+      return <h4 style={baseFontSizeStyle('1.25rem')} className="text-xl font-bold text-stone-100 mt-4 mb-2">{item.text}</h4>;
     case ContentType.PARAGRAPH:
-      return <p style={baseFontSizeStyle('1rem')} className="my-4 text-stone-300 leading-relaxed text-justify text-base">{item.text}</p>;
+      return <p style={baseFontSizeStyle('1.25rem')} className="my-4 text-stone-300 leading-relaxed text-justify text-xl">{item.text}</p>;
     case ContentType.LIST_UNORDERED:
       return (
-        <ul style={baseFontSizeStyle('1rem')} className="my-4 mr-6 list-disc list-outside space-y-2 text-stone-300 text-base">
+        <ul style={baseFontSizeStyle('1.25rem')} className="my-4 mr-6 list-disc list-outside space-y-2 text-stone-300 text-xl">
           {item.items?.map((li, index) => (
             <li key={index} dangerouslySetInnerHTML={{ __html: li }}></li>
           ))}
@@ -73,8 +73,8 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
         <dl className="my-4 space-y-3">
           {item.definitionItems?.map((dlItem: DefinitionListItem, index: number) => (
             <div key={index} className="bg-stone-700 p-3 rounded-md border border-stone-600">
-              <dt style={baseFontSizeStyle('1.125rem')} className="text-lg font-bold text-stone-200" dangerouslySetInnerHTML={{ __html: dlItem.term }}></dt>
-              <dd style={baseFontSizeStyle('1.125rem')} className="text-lg text-stone-200 mr-4">{dlItem.definition}</dd>
+              <dt style={baseFontSizeStyle('1.25rem')} className="text-xl font-bold text-stone-200" dangerouslySetInnerHTML={{ __html: dlItem.term }}></dt>
+              <dd style={baseFontSizeStyle('1.25rem')} className="text-xl text-stone-200 mr-4">{dlItem.definition}</dd>
             </div>
           ))}
         </dl>
@@ -82,13 +82,13 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
     case ContentType.NOTE:
       return (
         <div className="my-6 p-4 bg-amber-800 border-r-4 border-amber-600 rounded-md shadow">
-          {item.title && <p style={baseFontSizeStyle('1rem')} className="font-bold text-amber-200 mb-1 text-base">{item.title}</p>}
-          <p style={baseFontSizeStyle('1.125rem')} className="text-lg text-amber-100 whitespace-pre-wrap font-code">{item.text}</p>
+          {item.title && <p style={baseFontSizeStyle('1.25rem')} className="font-bold text-amber-200 mb-1 text-xl">{item.title}</p>}
+          <p style={baseFontSizeStyle('1.25rem')} className="text-xl text-amber-100 whitespace-pre-wrap font-code">{item.text}</p>
         </div>
       );
     case ContentType.LINK:
       return (
-        <p style={baseFontSizeStyle('1rem')} className="my-2 text-base">
+        <p style={baseFontSizeStyle('1.25rem')} className="my-2 text-xl">
           <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:text-sky-200 hover:underline transition-colors">
             {item.text || item.url}
           </a>
@@ -96,7 +96,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
       );
     case ContentType.PREFORMATTED_TEXT:
        return (
-        <pre style={baseFontSizeStyle('1rem')} className="my-4 p-4 bg-stone-900 text-stone-200 rounded-md overflow-x-auto font-code border border-stone-700 text-base">
+        <pre style={baseFontSizeStyle('1.25rem')} className="my-4 p-4 bg-stone-900 text-stone-200 rounded-md overflow-x-auto font-code border border-stone-700 text-xl">
           {item.text}
         </pre>
       );

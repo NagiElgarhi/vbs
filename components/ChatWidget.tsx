@@ -1,6 +1,59 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getAiResponse } from '../services/geminiService'; // Import the new service
 
+// --- TypeScript declarations for Speech Recognition API ---
+// This is necessary because the Web Speech API is not yet part of standard TypeScript DOM typings.
+interface SpeechRecognitionResult {
+    readonly isFinal: boolean;
+    readonly [index: number]: SpeechRecognitionAlternative;
+    readonly length: number;
+    item(index: number): SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionResultList {
+    readonly [index: number]: SpeechRecognitionResult;
+    readonly length: number;
+    item(index: number): SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent extends Event {
+    readonly resultIndex: number;
+    readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+    readonly error: string;
+    readonly message: string;
+}
+
+interface SpeechRecognitionAlternative {
+    readonly transcript: string;
+    readonly confidence: number;
+}
+
+interface SpeechRecognitionStatic {
+    new(): SpeechRecognition;
+}
+
+interface SpeechRecognition extends EventTarget {
+    lang: string;
+    interimResults: boolean;
+    continuous: boolean;
+    onresult: (event: SpeechRecognitionEvent) => void;
+    onend: () => void;
+    onerror: (event: SpeechRecognitionErrorEvent) => void;
+    start(): void;
+    stop(): void;
+}
+
+declare global {
+    interface Window {
+        SpeechRecognition: SpeechRecognitionStatic;
+        webkitSpeechRecognition: SpeechRecognitionStatic;
+    }
+}
+// --- End of declarations ---
+
 interface ChatWidgetProps {
   apiKey: string | null;
   sectionContent: string;
@@ -10,6 +63,7 @@ interface ChatWidgetProps {
 interface ChatMessage {
   sender: 'user' | 'ai';
   text: string;
+  imagePreview?: string;
 }
 
 const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, sectionTitle }) => {
@@ -18,6 +72,13 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // New state for image and voice
+  const [uploadedImage, setUploadedImage] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // Drag state
   const [position, setPosition] = useState({ 
@@ -83,15 +144,78 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
     };
   }, [isDragging, dragStart]);
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        const mimeType = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+        const base64Data = dataUrl.split(',')[1];
+        setUploadedImage({ data: base64Data, mimeType, preview: dataUrl });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const toggleRecording = () => {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("متصفحك لا يدعم التعرف على الكلام.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ar-SA';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+           setUserInput(prev => prev + event.results[i][0].transcript);
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+    };
+    
+    recognition.onend = () => {
+        setIsRecording(false);
+    };
+    
+    recognition.onerror = (event) => {
+        setError(`خطأ في التعرف على الكلام: ${event.error}`);
+        setIsRecording(false);
+    }
+
+    recognition.start();
+    setIsRecording(true);
+    recognitionRef.current = recognition;
+  };
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userInput.trim() || isLoading) return;
+    if ((!userInput.trim() && !uploadedImage) || isLoading) return;
 
-    const newUserMessage: ChatMessage = { sender: 'user', text: userInput };
+    const newUserMessage: ChatMessage = { 
+      sender: 'user', 
+      text: userInput,
+      imagePreview: uploadedImage?.preview
+    };
     setChatHistory(prev => [...prev, newUserMessage]);
     const currentInput = userInput;
+    const currentImage = uploadedImage;
     setUserInput('');
+    setUploadedImage(null);
     setIsLoading(true);
     setError(null);
     
@@ -104,7 +228,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
     }
 
     try {
-        const aiText = await getAiResponse(apiKey, currentInput, sectionContent);
+        const aiText = await getAiResponse(apiKey, currentInput, sectionContent, currentImage || undefined);
         const aiResponse: ChatMessage = { sender: 'ai', text: aiText };
         setChatHistory(prev => [...prev, aiResponse]);
     } catch (err) {
@@ -162,6 +286,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
             {chatHistory.map((msg, index) => (
               <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] p-2 rounded-lg text-sm ${msg.sender === 'user' ? 'bg-sky-700 text-white' : 'bg-stone-600 text-stone-200'}`}>
+                    {msg.imagePreview && <img src={msg.imagePreview} alt="user upload" className="rounded-md mb-2 max-w-full h-auto" />}
                    <p className="whitespace-pre-wrap">{msg.text}</p>
                 </div>
               </div>
@@ -178,10 +303,54 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
             {error && <p className="text-red-400 text-xs p-2 bg-red-900/50 rounded">{error}</p>}
              <div ref={messagesEndRef} />
           </div>
+            
+           {/* Image Preview */}
+            {uploadedImage && (
+                <div className="p-2 border-t border-stone-600 bg-stone-700 flex items-center justify-between">
+                    <img src={uploadedImage.preview} alt="preview" className="w-12 h-12 rounded-md object-cover" />
+                    <button onClick={() => setUploadedImage(null)} className="p-1 text-red-400 hover:text-red-300">
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                         </svg>
+                    </button>
+                </div>
+            )}
 
           {/* Input Form */}
           <form onSubmit={handleSendMessage} className="p-2 border-t border-stone-600">
             <div className="flex items-center">
+             <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="رفع صورة"
+                className="p-2 text-stone-300 hover:text-white disabled:text-stone-500"
+                disabled={isLoading}
+              >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                  </svg>
+              </button>
+              <button
+                type="button"
+                onClick={toggleRecording}
+                title={isRecording ? "إيقاف التسجيل" : "التسجيل الصوتي"}
+                className={`p-2 ${isRecording ? 'text-red-500 animate-pulse' : 'text-stone-300'} hover:text-white disabled:text-stone-500`}
+                disabled={isLoading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+                  <path d="M5.5 10.5a.5.5 0 001 0v-1a.5.5 0 00-1 0v1z" />
+                   <path d="M10 12a4 4 0 00-4 4v.5a.5.5 0 001 0V16a3 3 0 016 0v.5a.5.5 0 001 0V16a4 4 0 00-4-4z" />
+                </svg>
+              </button>
+
               <input
                 type="text"
                 value={userInput}
@@ -191,7 +360,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, sectionContent, section
                 className="flex-1 bg-stone-900 border border-stone-500 rounded-md py-1.5 px-3 text-white placeholder-stone-400 focus:ring-amber-400 focus:border-amber-400 transition text-sm"
                 aria-label="Chat input"
               />
-              <button type="submit" disabled={isLoading || !userInput.trim() || !sectionContent} className="mr-2 rtl:ml-2 rtl:mr-0 p-2 bg-sky-600 text-white rounded-md disabled:bg-stone-500 disabled:cursor-not-allowed hover:bg-sky-700 transition">
+              <button type="submit" disabled={isLoading || (!userInput.trim() && !uploadedImage) || !sectionContent} className="mr-2 rtl:ml-2 rtl:mr-0 p-2 bg-sky-600 text-white rounded-md disabled:bg-stone-500 disabled:cursor-not-allowed hover:bg-sky-700 transition">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 rtl:rotate-180">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                 </svg>

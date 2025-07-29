@@ -35,7 +35,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code }) => {
           </span>
         )}
       </div>
-      <pre className="p-4 pt-10 text-gray-100 overflow-x-auto whitespace-pre-wrap break-all font-code leading-relaxed text-left text-base">
+      <pre
+        className="p-4 pt-10 text-gray-100 overflow-x-auto whitespace-pre-wrap break-all font-code leading-relaxed text-left"
+        style={{ fontSize: `calc(0.875rem * var(--font-size-multiplier, 1))` }}
+      >
         <code dir="ltr">{code}</code>
       </pre>
     </div>
