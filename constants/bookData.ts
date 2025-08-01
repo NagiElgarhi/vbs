@@ -9,6 +9,10 @@ import { part6Content } from './parts/part6Content';
 import { part7Content } from './parts/part7Content';
 import { part8Content } from './parts/part8Content';
 import { part9Content } from './parts/part9Content';
+import { part10Content } from './parts/part10Content';
+import { part11Content } from './parts/part11Content';
+import { part12Content } from './parts/part12Content';
+
 
 export const bookData: Book = {
   bookTitle: "إدارة وتشغيل الباك-إند على VPS – من الصفر للاحتراف",
@@ -22,6 +26,9 @@ export const bookData: Book = {
     part6Content,
     part7Content,
     part8Content,
-    part9Content
+    part9Content,
+    part10Content,
+    part11Content,
+    part12Content
   ]
 };

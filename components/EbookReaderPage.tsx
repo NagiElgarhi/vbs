@@ -1,10 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// Ensure bookData is imported correctly based on your project structure
-// If you use constants/bookData.ts which imports from constants/parts/* :
+// Use the single comprehensive bookData.ts file
 import { bookData } from '../constants/bookData'; 
-// If you use the provided constants/ebookContent.ts directly:
-// import { bookData } from '../constants/ebookContent'; 
 
 import ContentRenderer from './ContentRenderer';
 import { ChapterSection, Part, Chapter, ContentType, ContentItem, Book, SearchResult } from '../types';
@@ -430,7 +427,7 @@ export const EbookReaderPage: React.FC = () => {
 
 
   // Helper array for Arabic numerals
-  const arabicNumerals = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
+  const arabicNumerals = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر"];
 
   return (
     <>
